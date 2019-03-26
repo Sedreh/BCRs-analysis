@@ -1,0 +1,37 @@
+---
+title: "Chain random selection"
+output: pdf_document
+---
+```{r}
+library(dplyr)
+library(data.table)
+```
+
+```{r}
+genomics_data = fread('/media/sedreh/DC8C64618C643862/bioinformatics course/ITMO/semester2/Bcellsproject/third session/filterreddata.csv')
+summary(genomics_data)
+```
+```{r}
+#Choosing 5 random cell with multi chain condition
+Random_Chain_selection <- function(genomics_data)
+{
+  result <- genomics_data %>%
+    select (barcode, chain) %>%
+    filter(chain == "Multi")%>%
+    sample_n(5)
+  result
+}
+Random_Chain_selection(genomics_data)
+```
+
+```{r}
+#Choosing 5 random cell wit multi, None, TRA, TRG, AND, TRD chain conditions
+sample.new <- function(x){
+  sample_n(x, min(c(5, nrow(x))))
+}
+
+genomics_data[chain %in% c('Multi','None','TRA','TRG','TRD'), sample.new(.SD), by=chain]
+
+```
+
+
