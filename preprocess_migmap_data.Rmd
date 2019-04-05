@@ -1,0 +1,191 @@
+---
+title: "Preprocess_migmap_data"
+output: word_document
+---
+```{r}
+library(tidyr)
+library(dplyr)
+library(data.table)
+```
+
+```{r}
+data <-fread('/home/sedreh/university_files/ITMO/semester2/Bcellsproject/forth_session/results_file.csv', sep="\t", header=TRUE)
+```
+
+```{r}
+preprocess_data <- function(data){
+separate(data,
+         col = "read.header",
+         into = c("read", "header"),
+         sep = "_")  
+}
+preprocess_data(data)
+```
+
+```{r}
+New_data <-function(preprocess_data){
+  new_data <- preprocess_data %>% select(read, v.segment, d.segment, j.segment)
+ new_data 
+}
+New_data(preprocess_data(data))
+```
+
+```{r}
+Final_preprocess_data <-function(preprocess_data){
+preprocess_data %>% 
+  rename(
+    barcode = read,
+    v_gene= v.segment,
+    d_gene = d.segment,
+    j_gene= j.segment
+    )
+}
+Final_data = Final_preprocess_data(New_data(preprocess_data(data)))
+Final_data 
+```
+
+```{r}
+#Number of cells (As we have several copies of each barcode,we need to count just one copy of unique barcoe)
+
+barcode_summary <- function(Final_data)
+{
+  number_of_cells <- Final_data %>% 
+    distinct(barcode) %>% 
+    count()
+  number_of_cells$n 
+}
+barcode_summary(Final_data)
+```
+
+```{r}
+apply(Final_data[1:3,], 1, function(x) {
+  substr(x[2:3], 1, 4)
+})
+```
+
+```{r}
+
+ matrix_gene_data <- as.matrix(Final_data[,2:4])
+ matrix_gene_data <- substr(matrix_gene_data, 1, 3) # get only first three characters
+ Final_data$chain <- apply(matrix_gene_data, 1, function(x) {
+   x <- x[!(x %in% ".")] # removeing . 
+   x <- unique(x) # get unique value from row
+   if(length(x) == 0) { # if all are . then return none
+     "None"
+   } else if (length(x) > 1) { # if more than 1 unique value then it's multi
+     "Multi"
+   } else { # otherwise just single chain value
+     x
+   }
+ })
+ Final_data
+```
+
+```{r}
+#show the number of occurance of each copy
+
+barcode_summary <- function(Final_data)
+  {
+  barcode_summary <- group_by(Final_data, barcode) 
+  barcode_summary <- summarize(barcode_summary, count=n())
+  barcode_summary <- group_by(barcode_summary, count) 
+  barcode_summary
+}
+result <- barcode_summary(Final_data)
+result
+```
+
+```{r}
+
+```
+
+```{r}
+write.csv(Final_data,'Final_preprocess_data.csv') 
+```
+
+```{r}
+#How many IGK,IGH, IGL and Multi we have in the data?
+Summary <- function(Final_data)
+{
+  chain_summary <- group_by(Final_data, chain)
+  chain_summary <- summarize(chain_summary, count=n()) 
+  chain_summary
+}
+Summary (Final_data)
+```
+
+
+```{r}
+#Number of copies of each cell
+
+barcode_summary <- function(Final_data)
+  {
+  barcode_summary <- group_by(Final_data, barcode) 
+  barcode_summary <- summarize(barcode_summary, count=n())
+  barcode_summary
+}
+barcode_summary(Final_data)
+```
+
+```{r}
+#show the number of occurance of each copy
+
+barcode_summary <- function(Final_data)
+  {
+  barcode_summary <- group_by(Final_data, barcode) 
+  barcode_summary <- summarize(barcode_summary, count=n())
+  barcode_summary <- group_by(barcode_summary, count) 
+  barcode_summary
+}
+result <- barcode_summary(Final_data)
+hist(result$count)
+```
+
+```{r}
+#counts number of occurance of each chain type for every unique barcodehow 
+
+occurance_of_each_chain <- function(Final_data)
+{
+  result <- Final_data %>%
+    group_by(barcode, chain) %>%
+    filter(chain %in% c('IGK','IGH','IGL')) %>%
+    summarize(count=n())
+  result 
+}
+occurance_of_each_chain(Final_data)
+```
+
+```{r}
+# I have all conditions here
+
+occurance_of_each_chain <- function(Final_data)
+  {
+  result <- Final_data %>%
+    group_by(barcode, chain) %>%
+    filter(chain %in% c('IGK','IGH','IGL')) %>%
+    summarize(count=n())
+  result <- unite(result, 'result_chain', count, chain, remove=F, sep='') 
+  result <- summarize(result, type=paste(result_chain, collapse='_'), count=sum(count))
+  result
+}
+occurance_of_each_chain(Final_data)
+
+```
+
+```{r}
+# I added whichever condition that I want from data
+
+Condition <- function (result)
+  {
+  
+  many_conditions = c(
+  '1IGL', '1IGH', '1IGK', '1IGH_1IGK_1IGL' , '1IGH_1IGL' , '1IGH_1IGK', '1IGH_2IGK', 'IGH_2IGL')
+  result %>% 
+  filter(type %in% many_conditions) %>% 
+  group_by(type) %>% 
+  summarise(total=n())
+}
+Condition(occurance_of_each_chain(Final_data))
+```
+
+
