@@ -84,8 +84,17 @@ Condition(occurance_of_each_chain(preprocessed_data))
 
 ```{r}
 #counting distance of 2 string
-#dist.dna.Tamura("AAACCTGAGACCACGA", "AAACCTGAGCGTAATA", variance = FALSE, GCcontent = NULL)
+for (i,c) in enumerate(a):
+         if b[i] != c:
+         dist+=1
+dist
 
+#Example:
+
+a = 'AGCT'
+b = 'ACCT'
+[x for x in enumerate(a)]
+[(0, 'A'), (1, 'G'), (2, 'C'), (3, 'T')]
 ```
 
 
