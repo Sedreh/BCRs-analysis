@@ -1,0 +1,250 @@
+---
+title: "10xgenomics_Mousedata"
+output: word_document
+---
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(data.table)
+library(usedist)
+library(seqinr)
+```
+
+```{r}
+data_migmap_2 <-fread ('/home/sedreh/university_files/ITMO/semester2/Bcellsproject/midterm_fefence/mm2/result_mm2.csv', sep="\t", header=TRUE)
+summary(data_migmap_2)
+```
+```{r}
+
+d <- read.fasta('/home/sedreh/university_files/ITMO/semester2/Bcellsproject/midterm_fefence/mm2/mm2_filtered.fasta')
+d['AAACCTGCAATCACAC-1_contig_1']
+
+```
+
+```{r}
+preprocess_data <- function(data_migmap_2){
+separate(data_migmap_2,
+         col = "read.header",
+         into = c("read", "header"),
+         sep = "_")  
+}
+preprocess_data(data_migmap_2)
+```
+
+
+```{r}
+New_data <-function(preprocess_data){
+  new_data <- preprocess_data %>% select(read, v.segment, d.segment, j.segment)
+ new_data 
+}
+New_data(preprocess_data(data_migmap_2))
+```
+
+```{r}
+Final_preprocess_data <-function(preprocess_data){
+preprocess_data %>% 
+  rename(
+    barcode = read,
+    v_gene= v.segment,
+    d_gene = d.segment,
+    j_gene= j.segment
+    )
+}
+Final_data_2 = Final_preprocess_data(New_data(preprocess_data(data_migmap_2)))
+Final_data_2 
+```
+
+
+```{r}
+#Number of cells (As we have several copies of each barcode,we need to count just one copy of unique barcoe)
+
+barcode_summary <- function(Final_data_2)
+{
+  number_of_cells <- Final_data_2 %>% 
+    distinct(barcode) %>% 
+    count()
+  number_of_cells$n 
+}
+barcode_summary(Final_data_2)
+```
+
+```{r}
+#look at to the quality of chains
+
+count_table <- function(Final_data_2)
+{
+v_gene_and_j_gene <- filter(Final_data_2, v_gene != 'None' & j_gene != 'None')
+v_gene_and_j_gene <- count(v_gene_and_j_gene)$n
+
+no_v_gene_and_no_j_gene <- filter(Final_data_2, v_gene == 'None' & j_gene == 'None')
+no_v_gene_and_no_j_gene <- count(no_v_gene_and_no_j_gene)$n
+
+v_gene_or_j_gene <- filter(Final_data_2, v_gene != 'None' | j_gene != 'None')
+v_gene_or_j_gene <- count(v_gene_or_j_gene)$n
+
+stats <- data.frame(v_gene_and_j_gene, v_gene_or_j_gene, no_v_gene_and_no_j_gene)
+stats
+}
+count_table(Final_data_2)
+```
+
+```{r}
+matrix_gene_data <- as.matrix(Final_data_2[,2:4])
+ matrix_gene_data <- substr(matrix_gene_data, 1, 3) # get only first three characters
+ Final_data_2$chain <- apply(matrix_gene_data, 1, function(x) {
+   x <- x[!(x %in% ".")] # removeing . 
+   x <- unique(x) # get unique value from row
+   if(length(x) == 0) { # if all are . then return none
+     "None"
+   } else if (length(x) > 1) { # if more than 1 unique value then it's multi
+     "Multi"
+   } else { # otherwise just single chain value
+     x
+   }
+ })
+ Final_data_2
+ summary(Final_data_2)
+```
+
+```{r}
+#How many IGK,IGH, IGL and Multi we have in the data?
+Summary <- function(Final_data_2)
+{
+  chain_summary <- group_by(Final_data_2, chain)
+  chain_summary <- summarize(chain_summary, count=n()) 
+  chain_summary
+}
+Summary (Final_data_2)
+```
+
+```{r}
+#Number of copies of each cell
+
+barcode_summary <- function(Final_data_2)
+  {
+  barcode_summary <- group_by(Final_data_2, barcode) 
+  barcode_summary <- summarize(barcode_summary, count=n())
+  barcode_summary
+}
+barcode_summary(Final_data_2)
+```
+
+```{r}
+#show the number of occurance of each copy
+
+barcode_summary <- function(Final_data_2)
+  {
+  barcode_summary <- group_by(Final_data_2, barcode) 
+  barcode_summary <- summarize(barcode_summary, count=n())
+  barcode_summary <- group_by(barcode_summary, count) 
+  barcode_summary <- summarize(barcode_summary, count_total=n())
+  barcode_summary
+}
+copy_barcode <- barcode_summary(Final_data_2)
+copy_barcode
+```
+
+```{r}
+hist(copy_barcode$count, xlim=c(1,8), ylim=c(0,1500), xlab="chain_migmap", ylab="count", col="green")
+# par(mfrow = c(1,2))
+# hist(chian_Migmap$count, xlim=c(1,8), ylim=c(0,1500), xlab="chain_Migmap", ylab="count", col="green")
+# hist(chain_filtered$count, xlim=c(1,8), ylim=c(0,1500), xlab="chain_filtered", ylab="count", col="skyblue")
+```
+
+```{r}
+#counts number of occurance of each chain type for every unique barcodehow 
+
+occurance_of_each_chain <- function(Final_data_2)
+{
+  result <- Final_data_2 %>%
+    group_by(barcode, chain) %>%
+    filter(chain %in% c('IGK','IGH','IGL')) %>%
+    summarize(count=n())
+  result 
+}
+occurance_of_each_chain(Final_data_2)
+```
+
+```{r}
+# I have all conditions here
+
+occurance_of_each_chain <- function(Final_data_2)
+  {
+  result <- Final_data_2 %>%
+    group_by(barcode, chain) %>%
+    filter(chain %in% c('IGK','IGH','IGL')) %>%
+    summarize(count=n())
+  result <- unite(result, 'result_chain', count, chain, remove=F, sep='') 
+  result <- summarize(result, type=paste(result_chain, collapse='_'), count=sum(count))
+  result
+}
+occurance_of_each_chain(Final_data_2)
+```
+
+```{r}
+# I added whichever condition that I want from data
+
+Condition <- function (result)
+  {
+  
+  many_conditions = c(
+  '1IGL', '1IGH', '1IGK', '1IGH_1IGK_1IGL' , '1IGH_1IGL' , '1IGH_1IGK', '1IGH_2IGK', 'IGH_2IGL')
+  result %>% 
+  filter(type %in% many_conditions) %>% 
+  group_by(type) %>% 
+  summarise(total=n())
+}
+Condition(occurance_of_each_chain(Final_data_2))
+```
+
+```{r}
+calculate_distance <- function(x, y) {
+  x <- strsplit(x, '')[[1]][2:17]
+  y <- strsplit(y, '')[[1]][2:17]
+  dist = 0
+  for(i in 1:length(x)) {
+    if(x[i] != y[i]) {
+      dist <- dist+ 1
+    }
+  }
+  dist
+}
+calculate_distance('>AAGGTTCAGGAGTCTG-1','>AACACGTGTGTTCGAT-1')
+```
+
+```{r}
+get_distance_matrix <- function(result, condition) {
+  barcode <- result %>% 
+    filter(type %in% condition) %>%
+    pull(barcode)
+  m <- length(barcode)
+  distance_matrix = matrix(rep(0, m*m), nrow = m, ncol = m) #
+  rownames(distance_matrix) = barcode
+  colnames(distance_matrix) = barcode
+  for(row in barcode) {
+    for(col in barcode) {
+      distance_matrix[row,col] <- calculate_distance(row, col)
+    }
+  }
+  distance_matrix
+}
+
+distance_matrix <- get_distance_matrix(occurance_of_each_chain(Final_data_2), '1IGH_2IGK')
+```
+
+```{r}
+distance_matrix
+```
+```{r}
+#m # number of barcodes given condition
+#rep(0, 10)
+#distance_matrix = matrix(rep(0, m*m), nrow = m, ncol = m) 
+```
+
+```{r}
+occurance_of_each_chain(Final_data_2) %>%
+  filter(type %in% '1IGH_2IGK')
+```
+
+
