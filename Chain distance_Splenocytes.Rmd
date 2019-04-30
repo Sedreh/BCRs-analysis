@@ -1,0 +1,182 @@
+---
+title: "Splenocytes_data"
+output: word_document
+---
+
+```{r}
+library(tidyr)
+library(data.table)
+library(seqinr)
+library(Biostrings)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r}
+data_migmap_2 <-fread ('/home/sedreh/ITMO/semester2/Bcellsproject/midterm_defence/mm2/result_mm2.csv', sep="\t", header=TRUE)
+summary(data_migmap_2)
+```
+
+```{r}
+d <- read.fasta('/home/sedreh/ITMO/semester2/Bcellsproject/midterm_defence/mm2/mm2_filtered.fasta')
+
+head(d)
+```
+
+```{r}
+New_data <-function(data_migmap_2){
+  new_data <- data_migmap_2 %>% select(read.header, v.segment, d.segment, j.segment)
+ new_data 
+}
+New_data(data_migmap_2)
+
+```
+
+```{r}
+data <-function(data_migmap_2){
+data_migmap_2 %>% 
+  rename(
+    barcode = read.header,
+    v_gene= v.segment,
+    d_gene = d.segment,
+    j_gene= j.segment
+    )
+}
+ 
+Splenocytes= data(New_data(data_migmap_2))
+Splenocytes 
+```
+
+```{r}
+matrix_gene_data <- as.matrix(Splenocytes[,2:4])
+ matrix_gene_data <- substr(matrix_gene_data, 1, 3) # get only first three characters
+ Splenocytes$chain <- apply(matrix_gene_data, 1, function(x) {
+   x <- x[!(x %in% ".")] # removeing . 
+   x <- unique(x) # get unique value from row
+   if(length(x) == 0) { # if all are . then return none
+     "None"
+   } else if (length(x) > 1) { # if more than 1 unique value then it's multi
+     "Multi"
+   } else { # otherwise just single chain value
+     x
+   }
+ })
+ Splenocytes
+```
+
+```{r}
+occurance_of_each_chain <- function(Splenocytes)
+{
+  result <- Splenocytes %>%
+    group_by(barcode, chain) %>%
+    filter(chain %in% c('IGK','IGH','IGL')) %>%
+    summarize(count=n())
+  result 
+}
+occurance_of_each_chain(Splenocytes)
+```
+
+```{r}
+occurance_of_each_chain <- function(Splenocytes)
+  {
+  result <- Splenocytes %>%
+    group_by(barcode, chain) %>%
+    filter(chain %in% c('IGK','IGH','IGL')) %>%
+    summarize(count=n())
+  result <- unite(result, 'result_chain', count, chain, remove=F, sep='') 
+  result <- summarize(result, type=paste(result_chain, collapse='_'), count=sum(count))
+  result
+}
+occurance_of_each_chain(Splenocytes)
+
+```
+
+
+```{r}
+estimate_condition <- function(Splenocytes) {
+  Splenocytes %>%
+  separate(barcode, into=c('bc','contig'),sep = '1_',remove = F) %>%
+    mutate(bc=substr(bc,2,18)) %>%
+  filter(chain %in% c('IGK','IGH','IGL')) %>%
+     group_by(bc, chain) %>%
+  summarize(contig=paste(contig, collapse = ','), count=n()) %>%
+  unite('result_chain', count, chain, remove=F, sep='') %>%
+  unite('contig', result_chain, contig, sep = '-', remove = F) %>%
+  group_by(bc) %>%
+  summarize(type=paste(result_chain, collapse='_'), count=sum(count), contig=paste(contig, collapse = '@'))
+}
+estimate_condition(Splenocytes)
+```
+
+
+```{r}
+estimate_condition(Splenocytes) %>% 
+  filter(type %in%  c('1IGH_2IGK'))
+```
+```{r}
+get_score <- function(s, condition) {
+  mat <- nucleotideSubstitutionMatrix(match = 0, mismatch = 1, baseOnly = TRUE)
+scores <- estimate_condition(s) %>% 
+  filter(type %in%  c(condition)) %>%
+  apply(1, function(x) {
+    contig <- strsplit(x['contig'], '@')[[1]]
+    
+    if(length(contig) == 2) {
+      contig <- strsplit(contig[2], '-')[[1]]
+      contig <- strsplit(contig[2], ',')[[1]]
+      barcodes <- c(
+        paste(x['bc'], contig[1], sep = '1_'), 
+        paste(x['bc'], contig[2], sep = '1_'))
+    } else {
+      contig1 <- strsplit(contig[2], '-')[[1]]
+      contig1 <- strsplit(contig1[2], ',')[[1]]
+      
+      contig2 <- strsplit(contig[3], '-')[[1]]
+      contig2 <- strsplit(contig2[2], ',')[[1]]
+      
+       barcodes <- c(
+        paste(x['bc'], contig1[1], sep = '1_'), 
+        paste(x['bc'], contig2[1], sep = '1_'))
+    }
+   
+    s1 <- DNAString(
+      toupper(
+        paste(d[barcodes[1]][[1]], collapse = '')
+      )
+    )
+    
+    s2 <- DNAString(
+      toupper(
+        paste(d[barcodes[2]][[1]], collapse = '')
+      )
+    )
+    
+    globalAlign <-
+      pairwiseAlignment(s1, s2, substitutionMatrix = mat,
+                      gapOpening = 0, gapExtension = -1, scoreOnly=T)
+    globalAlign
+  }) %>% unlist
+}
+ scores_1IGH_2IGK <- -get_score(Splenocytes, '1IGH_2IGK')
+ scores_1IGH_2IGK
+ scores_1IGH_2IGL <- -get_score(Splenocytes, '1IGH_2IGL')
+ scores_1IGH_2IGL
+ scores_1IGH_IGK_IGL <- -get_score(Splenocytes, '1IGH_1IGK_1IGL')
+ scores_1IGH_IGK_IGL
+ 
+```
+
+
+```{r}
+boxplot(scores_1IGH_2IGK, scores_1IGH_2IGL, scores_1IGH_IGK_IGL, xlab = "dual light chain",
+    ylab = "Distances", 
+    main = "Boxplot of the light chain's distance in Splenocytes datasets",
+    notch = TRUE, 
+    varwidth = TRUE, 
+    col = c("green","red","blue"), boxwex = 0.5, notches=FALSE)
+
+     
+
+```
+
+
