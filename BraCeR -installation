@@ -1,0 +1,85 @@
+
+https://github.com/Teichlab/bracer
+
+BraCeR - reconstruction of B cell receptor sequences from single-cell RNA-seq data
+
+After providing requirement, use this code for installation:
+conda install -c imperial-college-research-computing bracer
+
+Software requirements
+Python3 - BraCeR requires Python (>=3.4.0), as one of the required tools has this as a requirement.
+
+1)Bowtie2 - required for alignment of reads to synthetic BCR genomes. Bowtie1 is also required.
+
+conda install -c bioconda bowtie2 
+conda install -c bioconda/label/broken bowtie2 
+conda install -c bioconda/label/cf201901 bowtie2
+
+
+Bowtie 2 is an ultrafast and memory-efficient tool for aligning sequencing reads to long reference sequences. It is particularly good at aligning reads of about 50 up to 100s or 1,000s of characters, and particularly good at aligning to relatively long (e.g. mammalian) genomes. Bowtie 2 indexes the genome with an FM Index to keep its memory footprint small: for the human genome, its memory footprint is typically around 3.2 GB. Bowtie 2 supports gapped, local, and paired-end alignment modes.	
+
+2)Trinity - required for assembly of reads into BCR contigs. BraCeR requires Trinity v2.4.0.
+
+conda install -c bioconda trinity 
+conda install -c bioconda/label/broken trinity 
+conda install -c bioconda/label/cf201901 trinity
+
+
+Trinity, developed at the Broad Institute and the Hebrew University of Jerusalem, represents a novel method for the efficient and robust de novo reconstruction of transcriptomes from RNA-seq data. Trinity combines three independent software modules: Inchworm, Chrysalis, and Butterfly, applied sequentially to process large volumes of RNA-seq reads. Trinity partitions the sequence data into many individual de Bruijn graphs, each representing the transcriptional complexity at a given gene or locus, and then processes each graph independently to extract full-length splicing isoforms and to tease apart transcripts derived from paralogous genes.
+
+3)IgBLAST - required for analysis of assembled contigs. (ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/).
+
+conda install -c bioconda igblast 
+conda install -c bioconda/label/cf201901 igblast
+
+The variable domain of an immunoglobulin (IG) sequence is encoded by multiple genes, including the variable (V) gene, the diversity (D) gene and the joining (J) gene. Analysis of IG sequences typically requires identification of each gene, as well as a comparison of sequence variations in the context of defined regions. General purpose tools, such as the BLAST program, have only limited use for such tasks, as the rearranged nature of an IG sequence and the variable length of each gene requires multiple rounds of BLAST searches for a single IG sequence. Additionally, manual assembly of different genes is difficult and error-prone. To address these issues and to facilitate other common tasks in analysing IG sequences, we have developed the sequence analysis tool IgBLAST (http://www.ncbi.nlm.nih.gov/igblast/). With this tool, users can view the matches to the germline V, D and J genes, details at rearrangement junctions, the delineation of IG V domain framework regions and complementarity determining regions. IgBLAST has the capability to analyse nucleotide and protein sequences and can process sequences in batches. Furthermore, IgBLAST allows searches against the germline gene databases and other sequence databases simultaneously to minimize the chance of missing possibly the best matching germline V gene.
+
+4)BLAST - required for determination of isotype. (ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/).
+
+conda install -c bioconda blast 
+conda install -c bioconda/label/cf201901 blast 
+
+5)Kallisto - software for quantification of BCR expression.
+
+conda install -c bioconda kallisto 
+conda install -c bioconda/label/cf201901 kallisto
+
+kallisto is a program for quantifying abundances of transcripts from bulk and single-cell RNA-Seq data, or more generally of target sequences using high-throughput sequencing reads. It is based on the novel idea of pseudoalignment for rapidly determining the compatibility of reads with targets, without the need for alignment. On benchmarks with standard RNA-Seq data, kallisto can quantify 30 million human reads in less than 3 minutes on a Mac desktop computer using only the read sequences and a transcriptome index that itself takes less than 10 minutes to build. Pseudoalignment of reads preserves the key information needed for quantification, and kallisto is therefore not only fast, but also as accurate as existing quantification tools. In fact, because the pseudoalignment procedure is robust to errors in the reads, in many benchmarks kallisto significantly outperforms existing tools.
+
+6)Graphviz - Dot and Neato drawing programs required for visualisation of clonotype graphs. This is optional - see the --no_networks option to summarise.
+
+conda install -c anaconda graphviz
+
+Graphviz is open source graph visualization software. Graph visualization is a way of representing structural information as diagrams of abstract graphs and networks. It has important applications in networking, bioinformatics,  software engineering, database and web design, machine learning, and in visual interfaces for other technical domains. 
+
+
+7)PHYLIP - dnapars program of PHYLIP is required for lineage reconstruction. This is optional - see the --infer_lineage option to summarise.
+
+conda install -c bioconda/label/cf201901 phylip
+
+PHYLIP (the PHYLogeny Inference Package) is a package of programs for inferring phylogenies (evolutionary trees). It is available free over the Internet, and written to work on as many different kinds of computer systems as possible. The programs are controlled through a menu, which asks the users which options they want to set, and allows them to start the computation. The data are read into the program from a text file, which the user can prepare using any word processor or text editor (but it is important that this text file not be in the special format of that word processor -- it should instead be in "flat ASCII" or "Text Only" format). Some sequence analysis programs such as the ClustalW alignment program can write data files in the PHYLIP format. Most of the programs look for the data in a file called "infile" -- if they do not find this file they then ask the user to type in the file name of the data file.
+
+Output is written onto special files with names like "outfile" and "outtree". Trees written onto "outtree" are in the Newick format, an informal standard agreed to in 1986 by authors of a number of major phylogeny packages.
+
+Trim Galore! - required for adapter and quality trimming (optional).
+
+conda install -c bioconda trim-galore
+conda install -c bioconda/label/cf201901 trim-galore 
+
+Trim Galore! is a wrapper script to automate quality and adapter trimming as well as quality control, with some added functionality to remove biased methylation positions for RRBS sequence files (for directional, non-directional (or paired-end) sequencing)
+Trim Galore! can remove sequences if they become too short during the trimming process. For paired-end files Trim Galore! removes entire sequence pairs if one (or both) of the two reads became shorter than the set length cutoff. Reads of a read-pair that are longer than a given threshold but for which the partner read has become too short can optionally be written out to single-end files. This ensures that the information of a read pair is not lost entirely if only one read is of good quality
+Trim Galore! can trim paired-end files by 1 additional bp from the 3' end of all reads to avoid problems with invalid alignments with Bowtie 1
+Trim Galore! accepts and produces standard or gzip compressed FastQ files
+FastQC can be run on the resulting output files once trimming has completed (optional)
+
+R packages
+The following R packages are required if BraCeR is run with --infer_lineage.
+
+ggplot2
+Rscript
+Alakazam
+
+If you plan to run BraCeR with --infer_lineage to create lineage trees, please make sure that you have installed R (>= 3.1.2), ggplot2 (>= 2.0.0), Rscript (>=3.3.2) and Alakazam (>= 0.2.7).
+
+
+
