@@ -1,0 +1,83 @@
+
+0.) installling partis
+
+#####################
+
+
+sudo docker pull psathyrella/partis  # pull partis image from docker hub
+
+#############
+
+1.) running partis on docker
+
+###################################################
+
+
+sudo docker run -it --name container-1 -v ~:/host/home psathyrella/partis /bin/bash  # start up a container from this image
+#########################################################
+# docker environment is seperate from system environment. Within the docker image is a partis image dependent on a larger ubunutu image. So  it is like a mini system within a system, with it's own environment and installed dependencies, all it is taking is system to run.
+# We need to install additional packages here for plotting... without them plotting function wont work.
+# these will be installed within docker... seperate from the system
+
+# make a additional_packages.sh file with the following content
+#____________________________________________________________
+
+echo "Plotting packages"
+
+apt-get install xorg libx11-dev libglu1-mesa-dev  # may not be necessary, depending on existing R install, but is at least necessary in docker
+apt-get install r-cran-rgl
+conda install -y -cr r-rgl r-essentials
+unset R_LIBS_SITE
+R --vanilla --slave -e 'install.packages(c("bios2mds"), repos="http://cran.rstudio.com/")'
+
+# RPANDA: we need to use this modified src [i.e. not what it is in CRAN]
+mkdir -p packages/RPANDA/lib
+R CMD INSTALL -l packages/RPANDA/lib packages/RPANDA/
+
+echo "Simulation packages"
+
+conda install -y r-essentials  # this is simpler than the instructions under Plotting above because we don't need the x11 cruft
+unset R_LIBS_SITE
+R --vanilla --slave -e 'install.packages(c("TreeSim", "TreeSimGM"), repos="http://cran.rstudio.com/")'
+
+#____________________________________________________________
+
+bash /host/home/Desktop/additional_packages.sh
+
+### Thus all of these packages will be installed within docker image.
+
+# NOTE: inside docker image the home directory can be accessed using /host/home because this was used to launch the docker image
+##########
+
+cd /host/home/[skip user name]/<path to files>
+
+##########
+
+
+data:
+/host/home/sedreh/ITMO/semester2/Bcellsproject/final_Rcode/GM12878_human/vdj_v1_hs_gm12878_b_filtered_contig.fasta
+annotation:
+/host/home/sedreh/ITMO/semester2/Bcellsproject/final_Rcode/GM12878_human/vdj_v1_hs_gm12878_b_filtered_contig_annotation.csv
+
+# default plots directory
+mkdir /host/home/sedreh/ITMO/semester2/Bcellsproject/final_Rcode/GM12878_human/plots_partis
+
+# log directory -- here entire log of the session will be printed
+mkdir /host/home/sedreh/ITMO/semester2/Bcellsproject/final_Rcode/GM12878_human/log_partis
+## we touch a file in this directory where the log will be written
+touch /host/home/sedreh/ITMO/semester2/Bcellsproject/final_Rcode/GM12878_human/log_partis/log.txt
+## log.txt file will record the entire run of the session
+
+###############################################
+cd //
+cd partis/bin/
+
+partis partition --infname /host/home/ITMO/semester2/Bcellsproject/final_Rcode/GM12878_human/vdj_v1_hs_gm12878_b_filtered_contig.fasta --outfname /host/home/ITMO/semester2/Bcellsproject/final_Rcode/GM12878_human/vdj_v1_hs_gm12878_b_filtered_contig_partition_NEW_IGH.yaml --species human --locus  igh --plotdir /host/home/ITMO/semester2/Bcellsproject/final_Rcode/GM12878_human/plot_partis/ --debug-allele-finding > /host/home/ITMO/semester2/Bcellsproject/final_Rcode/GM12878_human/log_partis/log.txt
+
+#############################################
+
+
+__________________________________________________________________________________________________________
+
+
+
